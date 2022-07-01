@@ -10,18 +10,27 @@ library(dplyr)
 
 #Setting working directory and reading in the data into a dataframe, named martians_df
 setwd("/Users/papihajoharapurkar/Documents/Masters/")
-martians_df <- read.csv("SpecialTopics/ufo_subset.csv") #26008
+martians_df <- read.csv("ufo_subset.csv") #26008
 
 #Renaming column names so they do not contain spaces/periods, instead replaced with _
 martians_df = rename(martians_df, c('duration_seconds' = 'duration..seconds.'))
 martians_df = rename(martians_df, c('duration_hours_mins' = 'duration..hours.min.'))
+# Comment - Alternatively you could have done the following in one line using the pipe function:
+  # final <- ufo_subset %>%
+  # rename(duration.seconds = duration..seconds., duration.hours.min = duration..hours.min.)
 
 #Clean up the rows that do not have Country or Shape information
+  # Comment - I believe this could be achieved by filtering out the rows which have missing values in the Country and Shape column
+  # Comment - you could try
+      # filter(!is.na(country)) %>%
+      # filter(!is.na(shape)) %>%
 #Converting state category into factor instead of keeping the character-type
 martians_df$state <- as.factor(martians_df$state)
+# Comment - it's unclear why you did this step, I don't think this was asked in the assignment
 
 #Column called duration_time, replaces duration_hours_mins column with seconds_to_period function
 martians_df$duration_hours_mins <- seconds_to_period(martians_df$duration_seconds)
+# Comment - it's unclear why you did this step, I don't think this was asked in the assignment
 
 #Converted Datetime and Date_posted columns into appropriate formats with as.POSIXct function
 martians_df$date.posted <- as.POSIXct(martians_df$date.posted, format = "%Y-%m-%d")
@@ -32,12 +41,18 @@ martians_df$datetime <- as.POSIXct(martians_df$datetime, format = "%Y-%m-%d %H:%
 # and remove these sightings from the dataset.
 # Used grepl function to locate rows containing "hoax" and removed them from the dataframe 
 martians_df <- martians_df[!grepl("hoax", martians_df$comments, ignore.case = T), ] #Removed 245 sightings - at 25763
+# Comment - alternative: filter(!grepl("\\b[HOAX]", comments, ignore.case=T))
 
 # Add another column to the dataset (report_delay) and populate with the time difference in days,
 # between the date of the sighting and the date it was reported.
 # Used seconds_to_period function to convert difference in time-periods into seconds and extracted day value 
 martians_df$report_delay <- martians_df$date.posted - martians_df$datetime
 martians_df$report_delay <- seconds_to_period(martians_df$report_delay)$day
+# Comment - I can see that this makes sense because of the way you converted the format of the datetime and date.posted columns
+# Comment - alternative: convert datetime column to a format without the time included 
+  # Comment - mutate(datetime = gsub(" .*", "", datetime))
+# Comment - and then subtract one column from the other which gives the result in days
+  # Comment - mutate(report_delay = as.Date(date.posted) - as.Date(datetime))
 
 # Filter out the rows where the sighting was reported before it happened.
 # Kept days with report_delay = 0 in case report occurred on same day as sighting
@@ -48,6 +63,12 @@ martians_df$country[martians_df$country == ""] <- NA
 martians_df <- martians_df %>% filter(!is.na(martians_df$country))
 table_average_report_delay <- martians_df %>% group_by(country) %>% summarise(Average_Report_Delay = mean(report_delay, na.rm=T))
 table_average_report_delay
+# Comment - alternative: add to existing pipe function
+  # filter(!is.na(country)) %>%
+  # mutate(report_delay = as.Date(date.posted) - as.Date(datetime)) %>%
+  # filter(!datetime > date.posted) %>%
+  # group_by(country) %>%
+  # summarise(Avg_Report_Delay = round(mean(report_delay), 2))
 
 # Check the data quality (missingness, format, range etc) of the duration(seconds) column.
 # Explain what kinds of problems you have identified and how you chose to deal with them, in your comments.
